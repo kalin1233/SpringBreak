@@ -29,13 +29,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnInitListener {
     private lateinit var sayPhraseButton: Button
     private lateinit var phraseEditText: EditText
 
-    private val languages = listOf("English", "Spanish", "French", "Chinese")
-    private val vacationSpots = mapOf(
-        "English" to "Boston",
-        "Spanish" to "Mexico City",
-        "French" to "Paris",
-        "Chinese" to "Beijing"
-    )
+    private lateinit var languages: Array<String>
+    private lateinit var vacationSpots: Map<String, String>
 
     private lateinit var sensorManager: SensorManager
     private var accelerometer: Sensor? = null
@@ -49,6 +44,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnInitListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // Initialize language names and vacation spots from resources
+        languages = resources.getStringArray(R.array.languages_array)
+        vacationSpots = mapOf(
+            "English" to getString(R.string.vacation_spot_boston),
+            "Spanish" to getString(R.string.vacation_spot_mexico_city),
+            "French" to getString(R.string.vacation_spot_paris),
+            "Chinese" to getString(R.string.vacation_spot_beijing),
+            "Rome" to getString(R.string.vacation_spot_rome),
+            "Tokyo" to getString(R.string.vacation_spot_tokyo),
+            "Berlin" to getString(R.string.vacation_spot_berlin)
+        )
 
         // Find views by their IDs
         languageSpinner = findViewById(R.id.languageSpinner)
@@ -94,6 +101,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnInitListener {
             "Spanish" -> "es"
             "French" -> "fr"
             "Chinese" -> "zh"
+            "Italian" -> "it"
+            "Japanese" -> "ja"
+            "German" -> "de"
             else -> Locale.getDefault().language // Default to the device's default language
         }
     }
@@ -176,12 +186,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnInitListener {
     }
 
     private fun getGreeting(language: String): String {
-        return when (language) {
-            "English" -> "Hello"
-            "Spanish" -> "Hola"
-            "French" -> "Bonjour"
-            "Chinese" -> "你好"
-            else -> "Hello" // Default to English greeting
+        val greetingKey = "greeting_$language".lowercase(Locale.getDefault())
+        val resourceId = resources.getIdentifier(greetingKey, "string", packageName)
+        return if (resourceId != 0) {
+            getString(resourceId)
+        } else {
+            // If the greeting for the selected language is not found,
+            // fallback to using the user input as the default greeting
+            val defaultGreeting = vacationSpots[language]
+            defaultGreeting ?: getString(R.string.greeting_default)
         }
     }
 

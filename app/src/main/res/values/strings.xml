@@ -1,3 +1,34 @@
 <resources>
-    <string name="app_name">SpringBreak</string>
+    <string name="app_name">SpringBreak_Kailn_Toussaint</string>
+
+    <!-- Language Names -->
+    <string-array name="languages_array">
+        <item>English</item>
+        <item>Spanish</item>
+        <item>French</item>
+        <item>Chinese</item>
+        <item>Rome</item>
+        <item>Tokyo</item>
+        <item>Berlin</item>
+    </string-array>
+
+    <!-- Vacation Spots -->
+    <string name="vacation_spot_boston">Boston</string>
+    <string name="vacation_spot_mexico_city">Mexico City</string>
+    <string name="vacation_spot_paris">Paris</string>
+    <string name="vacation_spot_beijing">Beijing</string>
+    <string name="vacation_spot_rome">Rome</string>
+    <string name="vacation_spot_tokyo">Tokyo</string>
+    <string name="vacation_spot_berlin">Berlin</string>
+
+    <!-- Greetings -->
+    <string name="greeting_english">Hello</string>
+    <string name="greeting_spanish">Hola</string>
+    <string name="greeting_french">Bonjour</string>
+    <string name="greeting_chinese">你好</string>
+    <string name="greeting_italian">Ciao</string>
+    <string name="greeting_japanese">こんにちは</string>
+    <string name="greeting_german">Hallo</string>
+    <!-- Default greeting -->
+    <string name="greeting_default">Hello</string>
 </resources>
