@@ -11,6 +11,8 @@ import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognizerIntent
+import android.speech.tts.TextToSpeech
+import android.speech.tts.TextToSpeech.OnInitListener
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
@@ -18,25 +20,31 @@ import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import java.util.Locale
+import kotlin.math.abs
 
 
-class MainActivity : AppCompatActivity(), SensorEventListener {
+class MainActivity : AppCompatActivity(), SensorEventListener, OnInitListener {
 
     private lateinit var languageSpinner: Spinner
     private lateinit var sayPhraseButton: Button
     private lateinit var phraseEditText: EditText
 
-    private val languages = listOf("Spanish", "French", "Chinese") // Add more languages as needed
+    private val languages = listOf("English", "Spanish", "French", "Chinese")
     private val vacationSpots = mapOf(
+        "English" to "Boston",
         "Spanish" to "Mexico City",
         "French" to "Paris",
         "Chinese" to "Beijing"
-        // Add more vacation spots and languages as needed
     )
 
     private lateinit var sensorManager: SensorManager
     private var accelerometer: Sensor? = null
-    private var lastShakeTime: Long = 0
+    private var lastUpdate: Long = 0
+    private var lastX = 0f
+    private var lastY = 0f
+    private var lastZ = 0f
+
+    private lateinit var tts: TextToSpeech
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +68,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         // Initialize sensor manager and accelerometer sensor
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+        // Initialize TextToSpeech
+        tts = TextToSpeech(this, this)
     }
 
     private fun promptSpeechInput(language: String) {
@@ -79,10 +90,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun getLanguageCode(language: String): String {
         return when (language) {
+            "English" -> "en"
             "Spanish" -> "es"
             "French" -> "fr"
             "Chinese" -> "zh"
-            // Add more languages and their codes as needed
             else -> Locale.getDefault().language // Default to the device's default language
         }
     }
@@ -112,23 +123,33 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        event?.let {
-            if (event.sensor == accelerometer) {
-                val currentTime = System.currentTimeMillis()
-                if (currentTime - lastShakeTime > SHAKE_INTERVAL) {
-                    lastShakeTime = currentTime
-                    // Determine the chosen language
+        if (event?.sensor == accelerometer) {
+            val curTime = System.currentTimeMillis()
+            if (curTime - lastUpdate > SHAKE_INTERVAL) {
+                val diffTime = curTime - lastUpdate
+                lastUpdate = curTime
+
+                val x = event?.values?.get(0)
+                val y = event?.values?.get(1)
+                val z = event?.values?.get(2)
+
+                val speed =
+                    abs((x?.plus(y!!) ?: z!!) - lastX - lastY - lastZ) / diffTime * 10000
+
+                if (speed > SHAKE_THRESHOLD) {
+                    // Shake detected, open vacation spot on maps
                     val selectedLanguage = languageSpinner.selectedItem.toString()
-                    // Get the corresponding vacation spot
-                    val vacationSpot = vacationSpots[selectedLanguage]
-                    vacationSpot?.let { spot ->
-                        // Construct the geo URI
-                        val geoUri = "geo:0,0?q=$spot"
-                        // Launch Google Maps with the geo URI
-                        val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse(geoUri))
-                        mapIntent.setPackage("com.google.android.apps.maps")
-                        startActivity(mapIntent)
-                    }
+                    openVacationSpot(selectedLanguage)
+                }
+
+                if (x != null) {
+                    lastX = x
+                }
+                if (y != null) {
+                    lastY = y
+                }
+                if (z != null) {
+                    lastZ = z
                 }
             }
         }
@@ -138,8 +159,54 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         // Do nothing
     }
 
+    private fun openVacationSpot(language: String) {
+        val vacationSpot = vacationSpots[language]
+        vacationSpot?.let { spot ->
+            // Play greeting in the selected language
+            val selectedLanguage = languageSpinner.selectedItem.toString()
+            val greeting = getGreeting(selectedLanguage)
+            tts.speak(greeting, TextToSpeech.QUEUE_FLUSH, null, null)
+
+            // Open vacation spot on maps
+            val geoUri = "geo:0,0?q=$spot"
+            val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse(geoUri))
+            mapIntent.setPackage("com.google.android.apps.maps")
+            startActivity(mapIntent)
+        }
+    }
+
+    private fun getGreeting(language: String): String {
+        return when (language) {
+            "English" -> "Hello"
+            "Spanish" -> "Hola"
+            "French" -> "Bonjour"
+            "Chinese" -> "你好"
+            else -> "Hello" // Default to English greeting
+        }
+    }
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            val result = tts.setLanguage(Locale.getDefault())
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Toast.makeText(
+                    applicationContext,
+                    "Language not supported",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        } else {
+            Toast.makeText(
+                applicationContext,
+                "Initialization failed",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
     companion object {
         private const val REQUEST_CODE_SPEECH_INPUT = 100
-        private const val SHAKE_INTERVAL = 1000 // Minimum time between two shakes in milliseconds
+        private const val SHAKE_INTERVAL = 100 // Minimum time between two shakes in milliseconds
+        private const val SHAKE_THRESHOLD = 800 // Minimum acceleration change to consider shake
     }
 }
